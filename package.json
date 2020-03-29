@@ -32,7 +32,7 @@
     "domReady": "github:requirejs/domReady#d85bdc38a6df868ead52ab3e80715aaf60e68765",
     "eslint": "^6.8.0",
     "eslint-config-prettier": "^6.10.1",
-    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-jasmine": "^4.1.0",
     "eslint-plugin-prettier": "^3.1.2",
     "handlebars": "^4.7.3",
