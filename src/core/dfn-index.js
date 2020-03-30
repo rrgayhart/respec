@@ -82,9 +82,9 @@ function createLocalTermIndex() {
   const sortByTerm = (a, b) =>
     a.slice(a.search(/\w/)).localeCompare(b.slice(b.search(/\w/)));
 
-  const dataSortedByTerm = [...data]
-    .sort(([termA], [termB]) => sortByTerm(termA, termB))
-    .map(([term, dfns]) => [term, Array.from(dfns).filter(dfn => !!dfn.id)]);
+  const dataSortedByTerm = [...data].sort(([termA], [termB]) =>
+    sortByTerm(termA, termB)
+  );
 
   return html`<ul class="index">
     ${dataSortedByTerm.map(([term, dfns]) => renderLocalTerm(term, dfns))}
@@ -94,7 +94,10 @@ function createLocalTermIndex() {
 function collectLocalTerms() {
   /** @type {Map<string, HTMLElement[]>} */
   const data = new Map();
-  for (const elem of document.querySelectorAll("dfn:not([data-cite])")) {
+  /** @type {NodeListOf<HTMLElement>} */
+  const elems = document.querySelectorAll("dfn:not([data-cite])");
+  for (const elem of elems) {
+    if (!elem.id) continue;
     const text = norm(elem.textContent);
     const elemsByTerm = data.get(text) || data.set(text, []).get(text);
     elemsByTerm.push(elem);
