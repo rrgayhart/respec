@@ -38,7 +38,7 @@
     "handlebars": "^4.7.3",
     "highlight.js": "^9.18.1",
     "hyperhtml": "^2.32.2",
-    "idb": "^5.0.1",
+    "idb": "^5.0.2",
     "jasmine-core": "^3.5.0",
     "jasmine-reporters": "^2.3.2",
     "jquery": "^3.4.1",
