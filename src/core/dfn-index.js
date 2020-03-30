@@ -4,7 +4,7 @@
  * reference (external terms).
  */
 
-import { addId, getIntlData } from "./utils.js";
+import { addId, getIntlData, norm } from "./utils.js";
 import { citeDetailsConverter } from "./data-cite.js";
 import { fetchAsset } from "./text-loader.js";
 import { getTermFromElement } from "./xref.js";
@@ -18,9 +18,27 @@ const localizationStrings = {
   en: {
     heading: "Index",
     headingExternal: "Terms defined by reference",
+    headlingLocal: "Terms defined by this specification",
   },
 };
 const l10n = getIntlData(localizationStrings);
+
+// Terms of these _types_ are wrapped in `<code>`.
+const CODE_TYPES = new Set([
+  "attribute",
+  "callback",
+  "dict-member",
+  "dictionary",
+  "element-attr",
+  "element",
+  "enum-value",
+  "enum",
+  "exception",
+  "extended-attribute",
+  "interface",
+  "method",
+  "typedef",
+]);
 
 /**
  * @typedef {{ term: string, type: string, linkFor: string, elem: HTMLAnchorElement }} Entry
@@ -43,6 +61,12 @@ export async function run(conf) {
 
   const toCiteDetails = citeDetailsConverter(conf);
 
+  const localTermIndex = html`<section id="index-defined-here">
+    <h3>${l10n.headlingLocal}</h3>
+    ${createLocalTermIndex()}
+  </section>`;
+  index.append(localTermIndex);
+
   const externalTermIndex = html`<section id="index-defined-elsewhere">
     <h3>${l10n.headingExternal}</h3>
     ${createExternalTermIndex(toCiteDetails)}
@@ -50,6 +74,115 @@ export async function run(conf) {
   index.append(externalTermIndex);
 
   sub("beforesave", cleanup);
+}
+
+function createLocalTermIndex() {
+  const data = collectLocalTerms();
+  /** @param {string} a @param {string} b */
+  const sortByTerm = (a, b) =>
+    a.slice(a.search(/\w/)).localeCompare(b.slice(b.search(/\w/)));
+
+  const dataSortedByTerm = [...data]
+    .sort(([termA], [termB]) => sortByTerm(termA, termB))
+    .map(([term, dfns]) => [term, Array.from(dfns).filter(dfn => !!dfn.id)]);
+
+  return html`<ul class="index">
+    ${dataSortedByTerm.map(([term, dfns]) => renderLocalTerm(term, dfns))}
+  </ul>`;
+}
+
+function collectLocalTerms() {
+  /** @type {Map<string, HTMLElement[]>} */
+  const data = new Map();
+  for (const elem of document.querySelectorAll("dfn:not([data-cite])")) {
+    const text = norm(elem.textContent);
+    const elemsByTerm = data.get(text) || data.set(text, []).get(text);
+    elemsByTerm.push(elem);
+  }
+  return data;
+}
+
+/**
+ * @param {string} term
+ * @param {HTMLElement[]} dfns
+ * @returns {HTMLLIElement}
+ */
+function renderLocalTerm(term, dfns) {
+  const getType = dfn => {
+    const d = dfn.dataset;
+    const type = d.dfnType || d.idl || d.linkType || "";
+    switch (type) {
+      case "":
+      case "dfn":
+        return "";
+      default:
+        return type;
+    }
+  };
+
+  const getLinkingText = (dfn, type, term) => {
+    let text = term;
+    if (type === "enum-value") {
+      text = `"${text}"`;
+    }
+    if (CODE_TYPES.has(type) || dfn.dataset.idl) {
+      text = `<code>${text}</code>`;
+    }
+    return text;
+  };
+
+  const getSuffix = (dfn, type, term) => {
+    let suffix = "";
+    if (["dict-member", "method", "attribute", "enum-value"].includes(type)) {
+      const dfnFor = dfn.closest("[data-dfn-for]:not([data-dfn-for=''])");
+      const parent = dfnFor.dataset.dfnFor;
+      const parentType =
+        type === "dict-member"
+          ? "dictionary"
+          : type === "enum-value"
+          ? "enum"
+          : "interface";
+      const typeText =
+        type === "dict-member"
+          ? "member"
+          : type === "enum-value"
+          ? "element"
+          : type;
+      suffix = `${typeText} for <code>${parent}</code> ${parentType}`;
+    } else if (["interface", "dictionary", "enum"].includes(type)) {
+      suffix = type;
+    } else if (!term || term.startsWith("[[")) {
+      const dfnFor = dfn.closest("[data-dfn-for]:not([data-dfn-for=''])");
+      const parent = dfnFor.dataset.dfnFor;
+      suffix = `internal slot for <code>${parent}</code>`;
+    }
+    return suffix;
+  };
+
+  if (dfns.length === 1) {
+    const dfn = dfns[0];
+    const href = `#${dfn.id}`;
+    const type = getType(dfn);
+    const text = getLinkingText(dfn, type, term);
+    const suffix = getSuffix(dfn, type, term);
+    return html`<li>
+      <a class="index-term" href="${href}">${{ html: text }}</a>
+      ${{ html: suffix }}
+    </li>`;
+  }
+  return html`<li>
+    ${term}
+    <ul>
+      ${dfns.map(dfn => {
+        const href = `#${dfn.id}`;
+        const type = getType(dfn);
+        const text = getSuffix(dfn, type);
+        return html`<li>
+          <a class="index-term" href="${href}">${{ html: text }}</a>
+        </li>`;
+      })}
+    </ul>
+  </li>`;
 }
 
 /**
@@ -122,23 +255,6 @@ function renderExternalTermEntry(entry) {
   addId(el.querySelector("span"), "index-term");
   return el;
 }
-
-// Terms of these _types_ are wrapped in `<code>`.
-const CODE_TYPES = new Set([
-  "attribute",
-  "callback",
-  "dict-member",
-  "dictionary",
-  "element-attr",
-  "element",
-  "enum-value",
-  "enum",
-  "exception",
-  "extended-attribute",
-  "interface",
-  "method",
-  "typedef",
-]);
 
 // Terms of these _types_ are suffixed with their type info.
 const TYPED_TYPES = new Map([

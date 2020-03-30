@@ -1,5 +1,7 @@
 // @ts-check
 import { CaseInsensitiveMap } from "./utils.js";
+
+/** @type {Map<string, Set<HTMLElement>>} */
 export const definitionMap = new CaseInsensitiveMap();
 
 /**

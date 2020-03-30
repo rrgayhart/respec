@@ -21,3 +21,12 @@ ul.index code {
   color: inherit;
   font-size: 0.95em;
 }
+
+#index-defined-here ul.index ul,
+#index-defined-here ul.index code {
+  font-size: inherit;
+}
+
+#index-defined-here ul.index li {
+  font-size: 0.9rem;
+}
