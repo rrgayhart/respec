@@ -123,12 +123,17 @@ function renderLocalTerm(term, dfns) {
     }
   };
 
+  /**
+   * @param {HTMLElement} dfn
+   * @param {string} type
+   * @param {string} term
+   */
   const getLinkingText = (dfn, type, term) => {
     let text = term;
     if (type === "enum-value") {
       text = `"${text}"`;
     }
-    if (CODE_TYPES.has(type) || dfn.dataset.idl) {
+    if (CODE_TYPES.has(type) || dfn.dataset.idl || dfn.closest("code")) {
       text = `<code>${text}</code>`;
     }
     return text;
